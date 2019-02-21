@@ -1,12 +1,11 @@
-import telethon
 from telethon import TelegramClient, events, sync
 
 # These example values won't work. You must get your own api_id and
 # api_hash from https://my.telegram.org, under API Development.
 api_id = 12345
-api_hash = 'your api id'
+api_hash = '00fgc3dt53234f9f6f5b52e2714ab0e'
 #!/usr/bin/env python3
-# A simple script to print some messages.
+# A simple script to get notified on telegram.
 import os
 import sys
 import time
@@ -29,25 +28,30 @@ def get_env(name, message, cast=str):
 
 
 session = os.environ.get('TG_SESSION', 'printer')
-proxy = None  # https://github.com/Anorov/PySocks
+proxy = None
 
 # Create and start the client so we can make requests (we don't here)
 client = TelegramClient(session, api_id, api_hash, proxy=proxy).start()
-groupentity = await client.get_entity(-123456)
+
+# Insert your private chat ID where you want to receive the notifications
+groupentity = await client.get_entity(-13456) 
 
 # `pattern` is a regex, see https://docs.python.org/3/library/re.html
 # Use https://regexone.com/ if you want a more interactive way of learning.
 #
 # "(?i)" makes it case-insensitive, and | separates "options".
-@client.on(events.NewMessage(pattern=r'(?i).*\b(.*michael.*|.*john.*|.*frank.*)\b'))
+@client.on(events.NewMessage(pattern=r'(?i).*\b(.*yourname.*|.*yournickname.*|.*somethingelse.*)\b'))
 async def handler(event):
         print ('someone mentioned')
+
         sender = await event.get_sender()
         name = utils.get_display_name(sender)
         user = client.get_entity
-        mess_id = int(event.message.id)
-        await client.forward_messages(groupentity, mess_id, sender, silent=None)
-        notification_message = ('New mention\n\n\nText:\n\n' + event.message.message + '\n\n\nSent by: ' + name)
+        mess_id = event.message.id
+        await event.forward_to(groupentity)
+        chat_name = (await event.get_chat()).title
+        chat_id = str((await event.get_chat()).id)
+        notification_message = ('#NewReply' + '\n ---- \nChat Name: '+ chat_name + '\nChat ID: ' + chat_id + '\n ---- \n Sent by: ' + name + '\nText:\n' + event.message.message)
         await client.send_message(groupentity, notification_message)
 
 
@@ -58,22 +62,16 @@ async def replier(event):
             sender = await event.get_sender()
             name = utils.get_display_name(sender)
             user = client.get_entity
-
-            mess_id = int(event.message.id)
-            chat_name = 'chat name (i have to find the chat name)'
-            await client.forward_messages(groupentity, mess_id, sender, silent=None)
-            notification_message = ('New reply\n\n\nText:\n\n' + event.message.message + '\n\n\nSent by: ' + name + '\n\nChat name: \n\n' + chat_id)
+            mess_id = event.message.id
+            await event.forward_to(groupentity)
+            chat_name = (await event.get_chat()).title
+            chat_id = str((await event.get_chat()).id)
+            notification_message = ('#NewMention' + '\n ---- \nChat Name: '+ chat_name + '\nChat ID: ' + chat_id + '\n ---- \n Sent by: ' + name + '\nText:\n' + event.message.message)
             await client.send_message(groupentity, notification_message)
+            
     
 try:
     print('(Press Ctrl+C to stop this)')
     client.run_until_disconnected()
 finally:
     client.disconnect()
-
-# Note: We used try/finally to show it can be done this way, but using:
-#
-#   with client:
-#       client.run_until_disconnected()
-#
-# is almost always a better idea.
